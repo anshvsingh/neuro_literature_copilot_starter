@@ -1,0 +1,38 @@
+# Python environment
+.venv/
+venv/
+env/
+
+# Python cache and generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Secrets and local configuration
+.env
+.env.*
+
+# Research PDFs and local vector database
+data/papers/
+data/processed/
+*.pdf
+*.sqlite
+*.sqlite3
+*.db
+
+# Generated outputs (recreate by running the project)
+outputs/*
+!outputs/.gitkeep
+
+# Temporary backups and experimental copies
+*.bak
+*.backup
+*.before_*.py
+src/research_backup.py
+src/research_before_synthesis.py
+src/research_updated.py

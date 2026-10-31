@@ -1,0 +1,13 @@
+{
+  "question_id": "Q001",
+  "reference_answer": "Fill only after reviewing the source papers.",
+  "required_evidence": [
+    {
+      "paper_id": "ALZ01",
+      "page": 1,
+      "quote": "Replace with an exact verbatim quotation from the PDF."
+    }
+  ],
+  "expected_status": "supported",
+  "annotator_notes": "Template only; do not use as a real gold label."
+}

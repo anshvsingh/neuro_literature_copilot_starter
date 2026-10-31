@@ -1,0 +1,9 @@
+{
+  "question_id": "Q001",
+  "question": "What machine-learning approaches are used for the target task, and what evidence supports each reported result?",
+  "question_type": "method_comparison",
+  "target_conditions": [
+    "Alzheimer's disease"
+  ],
+  "status": "example_template_only"
+}
