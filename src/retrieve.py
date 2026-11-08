@@ -11,6 +11,27 @@ DB_DIR = ROOT / "data" / "processed" / "chroma_db"
 COLLECTION_NAME = "neuro_papers"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
+_CLIENT = None
+_COLLECTION = None
+_MODEL = None
+
+
+def get_embedding_model():
+    """Cache and return the SentenceTransformer model to avoid repeated disk loads."""
+    global _MODEL
+    if _MODEL is None:
+        _MODEL = SentenceTransformer(MODEL_NAME)
+    return _MODEL
+
+
+def get_collection():
+    """Cache and return the ChromaDB persistent collection."""
+    global _CLIENT, _COLLECTION
+    if _CLIENT is None or _COLLECTION is None:
+        _CLIENT = chromadb.PersistentClient(path=str(DB_DIR))
+        _COLLECTION = _CLIENT.get_collection(COLLECTION_NAME)
+    return _COLLECTION
+
 
 def load_chunks():
     if not CHUNKS_FILE.exists():
@@ -28,9 +49,10 @@ def load_chunks():
 
 
 def build_index():
+    global _CLIENT, _COLLECTION
     chunks = load_chunks()
     print(f"Loading embedding model: {MODEL_NAME}")
-    model = SentenceTransformer(MODEL_NAME)
+    model = get_embedding_model()
 
     client = chromadb.PersistentClient(path=str(DB_DIR))
 
@@ -44,6 +66,8 @@ def build_index():
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
     )
+    _CLIENT = client
+    _COLLECTION = collection
 
     batch_size = 64
 
@@ -83,10 +107,9 @@ def build_index():
 
 
 def search(query, top_k=5, condition=None):
-    client = chromadb.PersistentClient(path=str(DB_DIR))
-    collection = client.get_collection(COLLECTION_NAME)
+    collection = get_collection()
+    model = get_embedding_model()
 
-    model = SentenceTransformer(MODEL_NAME)
     query_embedding = model.encode(
         [query], normalize_embeddings=True
     ).tolist()
@@ -103,8 +126,8 @@ def search(query, top_k=5, condition=None):
     results = collection.query(**search_args)
     evidence = []
 
-    print(f"\\nQuestion: {query}")
-    print(f"Retrieved {len(results['ids'][0])} passages\\n")
+    print(f"\nQuestion: {query}")
+    print(f"Retrieved {len(results['ids'][0])} passages\n")
 
     for rank, (chunk_id, document, metadata, distance) in enumerate(
         zip(
@@ -135,7 +158,7 @@ def search(query, top_k=5, condition=None):
         print(f"Page: {metadata['page']}")
         print(f"Source: {metadata['source_file']}")
         print(f"Cosine distance: {distance:.4f}")
-        print("\\nPassage:")
+        print("\nPassage:")
         print(document[:1800])
         print()
 
