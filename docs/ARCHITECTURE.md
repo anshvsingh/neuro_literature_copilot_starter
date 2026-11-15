@@ -5,8 +5,8 @@
 ```mermaid
 flowchart TD
     subgraph Ingestion ["1. Data Ingestion & Indexing"]
-        A[Curated PDFs\n25 Papers across 4 Conditions] --> B[src.ingest\nPyMuPDF Extraction]
-        B --> C[data/processed/chunks.jsonl\n227 Semantic Chunks]
+        A[Real Research PDFs\n25 Papers across 4 Conditions] --> B[src.ingest\nPyMuPDF Extraction]
+        B --> C[data/processed/chunks.jsonl\n1,363 Semantic Chunks]
         B --> D[data/processed/manifest.csv\nPaper & Page Bounds]
         C --> E[src.retrieve --build\nall-MiniLM-L6-v2]
         E --> F[(ChromaDB Collection\nneuro_papers)]
@@ -15,7 +15,7 @@ flowchart TD
     subgraph QueryExecution ["2. Retrieval & Evidence Selection"]
         G[User Research Question] --> H[src.retrieve.search\nCosine Distance Retrieval]
         F --> H
-        H --> I[Candidate Pool\ntop_k * 8 candidates]
+        H --> I[Candidate Pool\ntop_k * 16 candidates\nUp to 120 Candidates]
         I --> J[src.research.assess_passage\nQuality & Reference Filtering]
         J --> K[Re-ranking & Diversity Selection\nAspect-aware Cue Boosting\nMax 2 chunks/paper]
         K --> L[Selected Evidence Passages]
@@ -48,9 +48,10 @@ flowchart TD
 
 ## Component Overview
 
-### 1. Ingestion (`src/ingest.py` & `src/build_corpus.py`)
+### 1. Ingestion (`src/ingest.py`)
+- Ingests all 25 real research PDFs organized by condition under `data/papers/`.
 - Extracts text page-by-page using PyMuPDF (`fitz`).
-- Generates sliding-window chunks with metadata (`paper_id`, `condition`, `condition_key`, `page`, `chunk_index_on_page`).
+- Generates sliding-window chunks with metadata (`paper_id`, `condition`, `condition_key`, `page`, `chunk_index_on_page`), totaling 1,363 chunks.
 - Produces `manifest.csv` tracking physical page counts and character extraction counts.
 
 ### 2. Semantic Retrieval (`src/retrieve.py`)

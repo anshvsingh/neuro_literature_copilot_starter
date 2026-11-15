@@ -29,11 +29,11 @@ A retrieval hit requires **both the paper ID and physical PDF page** to match an
 
 | Metric | Development Split (8 Qs) | Test Split (8 Qs) | Full Benchmark (16 Qs) |
 |---|---|---|---|
-| **Mean Recall@5** | **71.9%** | **93.8%** | **82.8%** |
-| **Mean MRR (Reciprocal Rank)** | **0.563** | **0.771** | **0.667** |
-| **Question Coverage@5** | **87.5%** (7/8) | **100.0%** (8/8) | **93.8%** (15/16) |
-| **Source Page Precision@5** | **30.0%** | **22.5%** | **26.3%** |
-| **Mean Latency per Query** | **0.88s** | **0.92s** | **0.50s** |
+| **Mean Recall@5** | **79.2%** | **87.5%** | **83.3%** |
+| **Mean MRR (Reciprocal Rank)** | **0.833** | **0.667** | **0.745** |
+| **Question Coverage@5** | **100.0%** (8/8) | **100.0%** (8/8) | **100.0%** (16/16) |
+| **Source Page Precision@5** | **32.5%** | **20.0%** | **26.3%** |
+| **Mean Latency per Query** | **2.37s** | **1.65s** | **0.79s** |
 
 ---
 
@@ -43,27 +43,27 @@ A retrieval hit requires **both the paper ID and physical PDF page** to match an
 
 | Question ID | Condition | Question Type | Recall@5 | MRR | Precision@5 | Status |
 |---|---|---|---|---|---|---|
-| **ADQ01** | Alzheimer's | Modalities & ML Models | 0.750 | 1.000 | 0.600 | Covered |
+| **ADQ01** | Alzheimer's | Modalities & ML Models | 0.667 | 1.000 | 0.400 | Covered |
 | **ADQ02** | Alzheimer's | Brain Regions & Biomarkers | 0.500 | 1.000 | 0.200 | Covered |
-| **EPQ01** | Epilepsy | Modalities & Classifiers | 1.000 | 1.000 | 0.600 | Covered |
-| **EPQ02** | Epilepsy | ML Limitations & Black-box | 1.000 | 0.500 | 0.200 | Covered |
-| **PDQ01** | Parkinson's | Modalities & Architectures | 0.000 | 0.000 | 0.000 | Uncovered (Broad) |
-| **PDQ02** | Parkinson's | Data Splitting & Leakage | 1.000 | 0.250 | 0.200 | Covered |
-| **SCQ01** | Schizophrenia | Biomarkers & Features | 1.000 | 0.500 | 0.400 | Covered |
-| **SCQ02** | Schizophrenia | Deep vs Handcrafted Models | 0.500 | 0.250 | 0.200 | Covered |
+| **EPQ01** | Epilepsy | Modalities & Classifiers | 0.667 | 1.000 | 0.400 | Covered |
+| **EPQ02** | Epilepsy | ML Limitations & Black-box | 1.000 | 1.000 | 0.200 | Covered |
+| **PDQ01** | Parkinson's | Modalities & Architectures | 1.000 | 0.333 | 0.600 | Covered |
+| **PDQ02** | Parkinson's | Data Splitting & Leakage | 1.000 | 1.000 | 0.200 | Covered |
+| **SCQ01** | Schizophrenia | Biomarkers & Features | 1.000 | 1.000 | 0.400 | Covered |
+| **SCQ02** | Schizophrenia | Deep vs Handcrafted Models | 0.500 | 0.333 | 0.200 | Covered |
 
 ### Test Split (Held-Out)
 
 | Question ID | Condition | Question Type | Recall@5 | MRR | Precision@5 | Status |
 |---|---|---|---|---|---|---|
-| **ADQ03** | Alzheimer's | Limitations & Future Work | 1.000 | 0.333 | 0.200 | Covered |
+| **ADQ03** | Alzheimer's | Limitations & Future Work | 1.000 | 0.500 | 0.200 | Covered |
 | **ADQ04** | Alzheimer's | Hippocampal Biomarker | 1.000 | 1.000 | 0.200 | Covered |
-| **EPQ03** | Epilepsy | Future Research Directions | 1.000 | 0.500 | 0.200 | Covered |
-| **EPQ04** | Epilepsy | Multidomain EEG Features | 1.000 | 1.000 | 0.200 | Covered |
-| **PDQ03** | Parkinson's | Clinical Use Limitations | 0.500 | 1.000 | 0.200 | Covered |
+| **EPQ03** | Epilepsy | Future Research Directions | 1.000 | 1.000 | 0.200 | Covered |
+| **EPQ04** | Epilepsy | Multidomain EEG Features | 1.000 | 0.500 | 0.200 | Covered |
+| **PDQ03** | Parkinson's | Clinical Use Limitations | 0.500 | 0.500 | 0.200 | Covered |
 | **PDQ04** | Parkinson's | Subtyping & Consensus Issues | 1.000 | 1.000 | 0.200 | Covered |
-| **SCQ03** | Schizophrenia | Generalizability & Grad-CAM | 1.000 | 0.333 | 0.400 | Covered |
-| **SCQ04** | Schizophrenia | Model Explainability Heatmaps | 1.000 | 1.000 | 0.200 | Covered |
+| **SCQ03** | Schizophrenia | Generalizability & Multi-site | 0.500 | 0.333 | 0.200 | Covered |
+| **SCQ04** | Schizophrenia | Model Explainability Heatmaps | 1.000 | 0.500 | 0.200 | Covered |
 
 ---
 

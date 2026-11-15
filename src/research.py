@@ -112,15 +112,12 @@ def assess_passage(passage):
     # Rule 2: numbered references even when the heading is absent.
     numbered_bibliography = bool(
         len(numbered) >= 2
+        and (len(authors) >= 2 or len(years) >= 2)
         and (
-            len(years) >= 2
-            or journal_terms >= 2
+            journal_terms >= 2
+            or page_ranges >= 1
             or dois + urls >= 1
-        )
-        and (
-            len(authors) >= 2
-            or journal_terms >= 3
-            or dois + urls >= 1
+            or (len(authors) >= 2 and len(years) >= 2)
         )
     )
 
@@ -146,10 +143,21 @@ def assess_passage(passage):
         )
     )
 
-    # Rule 5: publication metadata dominating a short passage.
+    # Rule 7: low-context title/header fragments.
+    has_scientific_signal = bool(re.search(
+        r"\b(achieved|accuracy|auc|outperformed|improved|found|showed|demonstrated|"
+        r"results?|classifier|sensitivity|specificity|cross[- ]validation|data leakage|"
+        r"hippocamp|atrophy|subcortical|amygdala|temporal lobe|wavelet|prefrontal|"
+        r"limitations?|diagnosis|subtypes?|consensus|differential|symptoms?|grad-cam|"
+        r"interpretability|saliency)\b",
+        lower,
+    ))
+
+    # Rule 5: publication metadata dominating a short passage lacking scientific findings.
     metadata_heavy = bool(
-        (metadata_terms >= 4 or (metadata_terms >= 1 and (dois >= 1 or urls >= 1)))
-        and len(clean) < 1800
+        (metadata_terms >= 4 or (metadata_terms >= 2 and (dois >= 1 or urls >= 1)))
+        and len(clean) < 1400
+        and not has_scientific_signal
         and (
             dois >= 1
             or urls >= 1
@@ -169,13 +177,6 @@ def assess_passage(passage):
         and not re.search(r"\b(accuracy|auc|outperformed|improved|results?|classifier)\b", lower)
     )
 
-    # Rule 7: low-context title/header fragments.
-    has_scientific_signal = bool(re.search(
-        r"\b(achieved|accuracy|auc|outperformed|improved|found|showed|demonstrated|"
-        r"results?|classifier|sensitivity|specificity|cross[- ]validation|data leakage|"
-        r"hippocamp|atrophy|subcortical|amygdala|temporal lobe|wavelet|prefrontal)\b",
-        lower,
-    ))
     is_uninformative = bool(
         len(clean) < 260
         and not has_scientific_signal
@@ -231,7 +232,7 @@ def prepare_evidence(question, top_k=5, condition=None):
     Retrieve candidate passages, assess their quality, filter reference-heavy
     and uninformative fragments, and select diverse, aspect-relevant evidence.
     """
-    candidate_count = min(max(top_k * 8, 30), 60)
+    candidate_count = min(max(top_k * 16, 60), 120)
 
     results = search(
         query=question,
@@ -246,12 +247,12 @@ def prepare_evidence(question, top_k=5, condition=None):
     seen_pages = set()
 
     is_limitation_q = bool(re.search(
-        r"\b(limitation|future|direction|propos|improv|challenge|leakage|generaliz|bias|pitfall|weakness)\b",
+        r"\b(limitation|future|direction|propos|improv|challenge|risk|split|leakage|generaliz|bias|pitfall|weakness|consensus|subtype)\b",
         question,
         re.IGNORECASE,
     ))
     is_method_q = bool(re.search(
-        r"\b(modalit|imaging|approach|model|classif|detect|predict|machine.learning|deep.learning)\b",
+        r"\b(modalit|imaging|approach|model|classif|detect|predict|machine.learning|deep.learning|eeg|mri|biomarker|grad-cam|interpret|saliency)\b",
         question,
         re.IGNORECASE,
     ))
@@ -282,15 +283,29 @@ def prepare_evidence(question, top_k=5, condition=None):
         # Aspect-aware relevance re-ranking
         dist = float(item.get("cosine_distance", 1.0))
         if is_limitation_q and re.search(
-            r"\b(limitation|future work|future research|future|direction|propos|suboptimal|challenge|imbalance|leakage|overfitting|generaliz|translation|requires more research|wearable|cloud)\b",
+            r"\b(limitation|future work|future research|future|direction|propos|suboptimal|challenge|imbalance|leakage|overfitting|generaliz|translation|requires more research|wearable|cloud|consensus|subtypes?|data splitting|data leakage|federated learning)\b",
             lower_text,
         ):
             dist -= 0.08
         if is_method_q and re.search(
-            r"\b(mri|spect|datscan|pet|eeg|fmri|dti|cnn|svm|convkan|resnet|vgg|inception|gcn|random forest|classifier|accuracy)\b",
+            r"\b(mri|spect|datscan|pet|eeg|fmri|dti|cnn|svm|convkan|resnet|vgg|inception|gcn|random forest|classifier|accuracy|biomarker|grad-cam|saliency)\b",
             lower_text,
         ):
             dist -= 0.04
+
+        # Specific conceptual alignment for methodological focus queries
+        if re.search(r"\b(data[- ]splitting|data leakage|cross[- ]validation)\b", question, re.I) and re.search(
+            r"\b(data[- ]splitting|data leakage|cross[- ]validation|same subject)\b", lower_text
+        ):
+            dist -= 0.10
+        if re.search(r"\b(subtyp\w*|consensus)\b", question, re.I) and re.search(
+            r"\b(subtypes?|consensus)\b", lower_text
+        ):
+            dist -= 0.10
+        if re.search(r"\b(grad[- ]cam|interpretability|saliency)\b", question, re.I) and re.search(
+            r"\b(grad[- ]cam|class activation map)\b", lower_text
+        ):
+            dist -= 0.10
 
         item["adjusted_distance"] = dist
         assessed_candidates.append(item)
