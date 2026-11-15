@@ -1472,7 +1472,7 @@
           <span class="results-count">Retrieved <strong>${data.results.length}</strong> verified passages for: <em>"${escapeHtml(data.query)}"</em></span>
         </div>
         <div class="evidence-cards-list">
-          ${data.results.map(item => `
+          ${data.results.map((item, idx) => `
             <div class="evidence-card">
               <div class="card-top">
                 <span class="citation-badge">
