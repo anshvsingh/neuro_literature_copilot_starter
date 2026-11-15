@@ -56,6 +56,24 @@ flowchart TD
 
 ---
 
+## Interactive Web Application (Modern UI)
+
+The project includes an interactive web interface built with FastAPI and a modern medical-grade dark/light themed dashboard.
+
+To launch the web application:
+```powershell
+# Run with single command (auto-opens your browser at http://127.0.0.1:8000)
+& ".\.venv\Scripts\python.exe" run_app.py
+```
+
+### Dashboard Capabilities:
+- **Research Studio**: Execute semantic searches or full adaptive multi-round agentic synthesis across any of the 4 conditions with real-time term highlighting and citation audits.
+- **Corpus Explorer**: Browse all 25 indexed peer-reviewed PDFs with page counts, semantic chunk tallies, and filter by condition.
+- **Benchmark & Evaluations**: Explore the verified 16-question evaluation suite (Development vs Held-Out Test splits) with physical paper IDs, gold pages, and verbatim quotes.
+- **Citation & Groundedness Verifier**: Interactive auditor for citation strings (`ALZ01, p. 4`), source page bounds checking against the manifest, and verbatim quote containment.
+
+---
+
 ## Key Improvements & Features
 
 1. **Verified Evaluation Benchmark:**
@@ -189,7 +207,11 @@ neuro_literature_copilot/
 │   ├── evaluation_development_k5.md / .json
 │   ├── evaluation_test_k5.md / .json
 │   └── evaluation_all_k5.md / .json
+├── run_app.py                      # One-click launcher for web application
 ├── src/
+│   ├── app.py                          # FastAPI backend REST API
+│   ├── static/                         # Modern frontend SPA
+│   │   └── index.html                  # Interactive dashboard UI
 │   ├── ingest.py                       # PDF extraction and chunking
 │   ├── retrieve.py                     # Cached semantic search with ChromaDB
 │   ├── research.py                     # Filtering, re-ranking, and report synthesis
