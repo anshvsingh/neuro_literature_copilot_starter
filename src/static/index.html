@@ -508,6 +508,13 @@
       transform: translateX(3px);
     }
 
+    .q-chip:active, .q-chip.active {
+      border-color: var(--accent-indigo);
+      background: rgba(99, 102, 241, 0.2);
+      transform: scale(0.98);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
+    }
+
     .q-chip-header {
       display: flex;
       justify-content: space-between;
@@ -820,6 +827,70 @@
       background: rgba(255, 255, 255, 0.02);
     }
 
+    .bench-summary-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .bench-mini-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bench-mini-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: var(--gradient-brand);
+      opacity: 0.8;
+    }
+
+    .bench-mini-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+
+    .bench-mini-val {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .btn-bench-run {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-bench-run:hover {
+      background: var(--accent-indigo);
+      color: white;
+      border-color: var(--accent-indigo);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
     /* Citation Verifier Tab */
     .verifier-grid {
       display: grid;
@@ -1087,15 +1158,35 @@
 
     <!-- TAB 3: BENCHMARK & EVALUATIONS -->
     <section id="pane-benchmark" class="tab-pane">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
         <div>
           <h2 style="font-size: 1.4rem; font-weight: 700;">Evaluation Benchmark Results ($k=5$)</h2>
-          <p style="font-size: 0.85rem; color: var(--text-muted);">Verified against 50/50 grounded source citations across 16 questions.</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Verified against 50/50 grounded source citations across 16 questions. Click any question or "Test" button to run live in Research Studio.</p>
         </div>
         <div class="mode-toggle">
-          <button class="mode-btn active" data-split="all" onclick="loadBenchmark('all')">All (16 Qs)</button>
-          <button class="mode-btn" data-split="development" onclick="loadBenchmark('development')">Development (8 Qs)</button>
-          <button class="mode-btn" data-split="test" onclick="loadBenchmark('test')">Held-Out Test (8 Qs)</button>
+          <button class="mode-btn active" data-split="all">All (16 Qs)</button>
+          <button class="mode-btn" data-split="development">Development (8 Qs)</button>
+          <button class="mode-btn" data-split="test">Held-Out Test (8 Qs)</button>
+        </div>
+      </div>
+
+      <!-- Benchmark Summary Metric Cards -->
+      <div class="bench-summary-bar" id="bench-summary-bar">
+        <div class="bench-mini-card">
+          <div class="bench-mini-label">Split Questions</div>
+          <div class="bench-mini-val" id="bench-stat-count">16</div>
+        </div>
+        <div class="bench-mini-card">
+          <div class="bench-mini-label">Mean Recall@5</div>
+          <div class="bench-mini-val" style="color: #38bdf8;" id="bench-stat-recall">83.3%</div>
+        </div>
+        <div class="bench-mini-card">
+          <div class="bench-mini-label">Mean MRR</div>
+          <div class="bench-mini-val" style="color: #a78bfa;" id="bench-stat-mrr">0.745</div>
+        </div>
+        <div class="bench-mini-card">
+          <div class="bench-mini-label">Question Coverage</div>
+          <div class="bench-mini-val" style="color: #34d399;" id="bench-stat-cov">100.0%</div>
         </div>
       </div>
 
@@ -1103,12 +1194,12 @@
         <table class="custom-table">
           <thead>
             <tr>
-              <th>Question ID</th>
-              <th>Recall@5</th>
-              <th>MRR</th>
-              <th>Precision@5</th>
-              <th>Covered</th>
-              <th>Matched Source Pages</th>
+              <th style="width: 140px;">ID & Condition</th>
+              <th>Benchmark Question</th>
+              <th style="width: 95px;">Recall@5</th>
+              <th style="width: 80px;">MRR</th>
+              <th>Gold Pages Matched</th>
+              <th style="width: 110px; text-align: right;">Action</th>
             </tr>
           </thead>
           <tbody id="benchmark-table-body">
@@ -1235,33 +1326,74 @@
 
     function renderSampleQuestions(questions) {
       const container = document.getElementById('question-chips');
-      container.innerHTML = questions.slice(0, 10).map(q => `
-        <div class="q-chip" onclick="selectQuestion('${escapeHtml(q.question)}', '${q.target_conditions[0] || 'all'}')">
+      if (!container) return;
+      if (!questions || questions.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 0.75rem 0;">No benchmark questions for this condition.</div>';
+        return;
+      }
+      const listToRender = questions.slice(0, 12);
+      container.innerHTML = listToRender.map((q, idx) => `
+        <div class="q-chip" data-idx="${idx}" role="button" tabindex="0" title="Click to investigate immediately">
           <div class="q-chip-header">
             <span class="q-chip-id">${q.question_id}</span>
-            <span class="q-chip-type">${(q.target_conditions[0] || '')} • ${q.question_type.replace('_', ' ')}</span>
+            <span class="q-chip-type">${(q.target_conditions && q.target_conditions[0]) || ''} • ${(q.question_type || '').replace('_', ' ')}</span>
           </div>
-          <div class="q-chip-text">${q.question}</div>
+          <div class="q-chip-text">${escapeHtml(q.question)}</div>
         </div>
       `).join('');
+
+      container.querySelectorAll('.q-chip').forEach(chip => {
+        const runChip = () => {
+          const idx = parseInt(chip.dataset.idx, 10);
+          const q = listToRender[idx];
+          if (q) {
+            container.querySelectorAll('.q-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            selectQuestion(q.question, (q.target_conditions && q.target_conditions[0]) || 'all', true);
+          }
+        };
+
+        chip.addEventListener('click', runChip);
+        chip.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            runChip();
+          }
+        });
+      });
     }
 
     function filterSampleQuestions() {
+      if (!sampleQuestionsList || sampleQuestionsList.length === 0) return;
       if (currentCondition === 'all') {
         renderSampleQuestions(sampleQuestionsList);
       } else {
-        const filtered = sampleQuestionsList.filter(q => q.target_conditions.includes(currentCondition));
+        const filtered = sampleQuestionsList.filter(q => q.target_conditions && q.target_conditions.includes(currentCondition));
         renderSampleQuestions(filtered);
       }
     }
 
-    window.selectQuestion = function(text, condition) {
+    window.selectQuestion = function(text, condition, autoRun = true) {
+      if (!queryInput) return;
       queryInput.value = text;
       if (condition && condition !== 'all') {
         const condBtn = document.querySelector(`.pill-btn[data-cond="${condition}"]`);
         if (condBtn) condBtn.click();
       }
       queryInput.focus();
+      
+      // Smooth scroll into query area
+      const studioCard = document.querySelector('.search-card');
+      if (studioCard) {
+        studioCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      if (autoRun) {
+        // Small delay to allow state changes to settle
+        setTimeout(() => {
+          runInvestigation();
+        }, 120);
+      }
     };
 
     // Execute Search or Agentic Synthesis
@@ -1356,7 +1488,7 @@
               <p class="card-passage">${highlightTerms(escapeHtml(item.passage))}</p>
               <div class="card-footer">
                 <span>Chunk: <code>${item.chunk_id}</code></span>
-                <button class="btn-verify-quick" onclick="verifyQuick('${item.citation}', '${escapeQuotes(item.passage.slice(0, 140))}')">
+                <button class="btn-verify-quick" data-idx="${idx}">
                   <i class="fa-solid fa-check"></i> Audit Grounding
                 </button>
               </div>
@@ -1364,6 +1496,18 @@
           `).join('')}
         </div>
       `;
+
+      // Safe event listeners for citation verifier
+      resultsArea.querySelectorAll('.btn-verify-quick').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.dataset.idx, 10);
+          const item = data.results[idx];
+          if (item) {
+            verifyQuick(item.citation, item.passage ? item.passage.slice(0, 140) : '');
+          }
+        });
+      });
     }
 
     function renderResearchResults(data) {
@@ -1454,32 +1598,116 @@
 
     // Benchmark Explorer
     async function loadBenchmark(split) {
+      document.querySelectorAll('.mode-btn[data-split]').forEach(b => {
+        b.classList.toggle('active', b.dataset.split === split);
+      });
       const tbody = document.getElementById('benchmark-table-body');
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem;"><span class="spinner"></span> Loading benchmark results...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2.5rem;"><span class="spinner"></span> Loading benchmark results...</td></tr>`;
       try {
         const res = await fetch(`/api/benchmark?split=${split}`);
         const data = await res.json();
-        const records = data.question_results || [];
-        tbody.innerHTML = records.map(r => `
-          <tr>
-            <td><strong>${r.question_id}</strong></td>
-            <td><strong style="color: #38bdf8;">${(r.recall_at_k * 100).toFixed(1)}%</strong></td>
-            <td>${r.reciprocal_rank.toFixed(3)}</td>
-            <td>${(r.source_page_precision_at_k * 100).toFixed(1)}%</td>
-            <td>
-              <span style="color: #34d399; font-weight: 600;">
-                <i class="fa-solid fa-circle-check"></i> Covered
-              </span>
-            </td>
-            <td>
-              ${(r.matched_pages || []).map(p => `<code>${p.paper_id} p.${p.page}</code>`).join(', ') || 'None'}
-            </td>
-          </tr>
-        `).join('');
+
+        // Update summary metrics
+        if (data.summary) {
+          const s = data.summary;
+          const countEl = document.getElementById('bench-stat-count');
+          const recallEl = document.getElementById('bench-stat-recall');
+          const mrrEl = document.getElementById('bench-stat-mrr');
+          const covEl = document.getElementById('bench-stat-cov');
+          if (countEl) countEl.textContent = s.questions_evaluated;
+          if (recallEl) recallEl.textContent = (s.mean_recall_at_k * 100).toFixed(1) + '%';
+          if (mrrEl) mrrEl.textContent = s.mean_mrr.toFixed(3);
+          if (covEl) covEl.textContent = (s.question_coverage_at_k * 100).toFixed(1) + '%';
+        }
+
+        const records = data.results || data.question_results || [];
+        if (records.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">No benchmark records found for ${split}.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = records.map((r, idx) => {
+          const metrics = r.metrics || r;
+          const matchedPages = metrics.matched_pages || [];
+          const recallPct = (metrics.recall_at_k * 100).toFixed(0);
+          const recallColor = metrics.recall_at_k >= 0.8 ? '#34d399' : (metrics.recall_at_k > 0 ? '#38bdf8' : '#fb7185');
+          const condTag = r.condition ? `<span class="tag-cond tag-${r.condition.toLowerCase().replace(/[^a-z]/g, '')}">${r.condition}</span>` : '';
+          const splitBadge = `<span style="font-size: 0.68rem; padding: 0.15rem 0.35rem; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted); text-transform: uppercase;">${r.split || split}</span>`;
+
+          const pagesHtml = matchedPages.length > 0
+            ? matchedPages.map(p => `<code style="font-size: 0.76rem; background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 0.15rem 0.35rem; border-radius: 4px; margin-right: 0.3rem;">${p.paper_id} p.${p.page}</code>`).join('')
+            : '<span style="color: var(--text-muted); font-size: 0.8rem;">None</span>';
+
+          return `
+            <tr class="benchmark-row" data-idx="${idx}">
+              <td>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-start;">
+                  <strong style="color: var(--accent-blue); font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;">${r.question_id}</strong>
+                  <div style="display: flex; gap: 0.3rem; align-items: center;">
+                    ${condTag}
+                    ${splitBadge}
+                  </div>
+                </div>
+              </td>
+              <td style="max-width: 480px;">
+                <div style="font-weight: 500; line-height: 1.45; color: var(--text-main); font-size: 0.88rem;">${escapeHtml(r.question)}</div>
+              </td>
+              <td>
+                <strong style="color: ${recallColor}; font-size: 0.95rem;">${recallPct}%</strong>
+              </td>
+              <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">
+                ${metrics.reciprocal_rank.toFixed(3)}
+              </td>
+              <td>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                  ${pagesHtml}
+                </div>
+              </td>
+              <td style="text-align: right;">
+                <button class="btn-bench-run" data-idx="${idx}" title="Run this benchmark question in Studio">
+                  <i class="fa-solid fa-play"></i> Test
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Attach event listeners to "Test" buttons and rows
+        tbody.querySelectorAll('.btn-bench-run').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(btn.dataset.idx, 10);
+            const r = records[idx];
+            if (r) {
+              document.querySelector('.tab-btn[data-tab="studio"]').click();
+              selectQuestion(r.question, r.condition || 'all', true);
+            }
+          });
+        });
+
+        tbody.querySelectorAll('.benchmark-row').forEach(row => {
+          row.style.cursor = 'pointer';
+          row.addEventListener('click', () => {
+            const idx = parseInt(row.dataset.idx, 10);
+            const r = records[idx];
+            if (r) {
+              document.querySelector('.tab-btn[data-tab="studio"]').click();
+              selectQuestion(r.question, r.condition || 'all', true);
+            }
+          });
+        });
+
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-rose);">Failed loading benchmark.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-rose); padding: 2rem;">Failed loading benchmark: ${escapeHtml(err.message)}</td></tr>`;
       }
     }
+
+    // Split buttons listener
+    document.querySelectorAll('.mode-btn[data-split]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        loadBenchmark(btn.dataset.split);
+      });
+    });
 
     // Citation Verifier Tab
     document.getElementById('btn-run-verify').addEventListener('click', async () => {
@@ -1525,7 +1753,12 @@
     // Helper functions
     function escapeHtml(str) {
       if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function escapeQuotes(str) {
