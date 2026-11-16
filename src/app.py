@@ -20,7 +20,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src import agentic_research, research, retrieve, validation
+from src import agentic_research, answer, research, retrieve, validation
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -52,6 +52,7 @@ class SearchRequest(BaseModel):
     question: str = Field(..., min_length=3, description="Research question to query")
     condition: Optional[str] = Field(None, description="alzheimers, epilepsy, parkinsons, or schizophrenia")
     top_k: int = Field(5, ge=1, le=20, description="Number of evidence passages to return")
+    include_answer: bool = Field(True, description="Extract a main answer and alternative answers from the passages")
 
 
 class ResearchRequest(BaseModel):
@@ -207,12 +208,17 @@ def search_evidence(req: SearchRequest) -> Dict[str, Any]:
                 "is_reference_heavy": item.get("is_reference_heavy", False),
             })
 
+        answers = None
+        if req.include_answer and evidence:
+            answers = answer.build_answers(req.question, evidence)
+
         return {
             "query": req.question,
             "condition_filter": req.condition,
             "top_k": req.top_k,
             "results_count": len(formatted_results),
             "results": formatted_results,
+            "answers": answers,
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

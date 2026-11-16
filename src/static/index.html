@@ -671,6 +671,155 @@
       background: rgba(99, 102, 241, 0.15);
     }
 
+    /* Extractive Answers */
+    .answer-section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 1.75rem 0 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .answer-section-title:first-child { margin-top: 0; }
+    .answer-section-title .count {
+      font-family: 'JetBrains Mono', monospace;
+      background: #0d131f;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.05rem 0.45rem;
+      letter-spacing: 0;
+    }
+
+    .answer-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .answer-card.main {
+      border-color: rgba(99, 102, 241, 0.55);
+      box-shadow: var(--shadow-glow);
+      background: linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, var(--bg-card) 60%);
+      padding: 1.6rem 1.75rem;
+    }
+
+    .answer-quote {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--text-main);
+      border-left: 3px solid var(--accent-indigo);
+      padding-left: 1rem;
+      margin: 0.85rem 0 1rem;
+    }
+    .answer-card.main .answer-quote {
+      font-size: 1.12rem;
+      border-left-color: var(--accent-blue);
+    }
+
+    .answer-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .answer-meta .spacer { flex: 1; }
+
+    .conf-pill, .rel-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      text-transform: capitalize;
+    }
+    .conf-high { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .conf-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .conf-low { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+    .rel-similar { background: rgba(56, 189, 248, 0.12); color: #7dd3fc; }
+    .rel-different { background: rgba(168, 85, 247, 0.14); color: #d8b4fe; }
+
+    .source-file {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .answer-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.9rem;
+    }
+
+    .supporting-list {
+      margin-top: 0.85rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .supporting-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent-blue);
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 6px;
+      padding: 0.1rem 0.45rem;
+      cursor: pointer;
+    }
+    .supporting-chip:hover { background: rgba(56, 189, 248, 0.18); }
+
+    .source-chunk {
+      display: none;
+      margin-top: 1rem;
+      background: #0d131f;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.15rem;
+    }
+    .source-chunk.open { display: block; }
+    .source-chunk-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+    }
+    .source-chunk p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: #94a3b8;
+    }
+
+    mark.ans-hl {
+      background: rgba(250, 204, 21, 0.22);
+      color: #fef9c3;
+      border-radius: 3px;
+      padding: 0.05rem 0.1rem;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+
+    .evidence-card.flash {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+    }
+
+    .answer-note {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
     /* Synthesis Markdown Report */
     .synthesis-report-card {
       background: var(--bg-card);
@@ -1467,13 +1616,27 @@
         return;
       }
 
+      // Map chunk_id -> highlight span used by any answer, to mark it in the passage list too.
+      const answerSpans = {};
+      const ans = data.answers || {};
+      const allAnswers = ans.answer ? [ans.answer, ...(ans.alternatives || [])] : [];
+      allAnswers.forEach(a => {
+        answerSpans[a.chunk_id] = a.highlight;
+        (a.supporting_sources || []).forEach(s => { answerSpans[s.chunk_id] = s.highlight; });
+      });
+
       resultsArea.innerHTML = `
+        ${renderAnswers(ans)}
+        <div class="answer-section-title">
+          <i class="fa-solid fa-layer-group"></i> All retrieved passages
+          <span class="count">${data.results.length}</span>
+        </div>
         <div class="results-header">
           <span class="results-count">Retrieved <strong>${data.results.length}</strong> verified passages for: <em>"${escapeHtml(data.query)}"</em></span>
         </div>
         <div class="evidence-cards-list">
           ${data.results.map((item, idx) => `
-            <div class="evidence-card">
+            <div class="evidence-card" id="passage-${cssId(item.chunk_id)}">
               <div class="card-top">
                 <span class="citation-badge">
                   <i class="fa-solid fa-bookmark"></i> ${item.citation}
@@ -1485,7 +1648,7 @@
                   <span class="tag-distance">Cosine: ${item.cosine_distance}</span>
                 </div>
               </div>
-              <p class="card-passage">${highlightTerms(escapeHtml(item.passage))}</p>
+              <p class="card-passage">${passageWithHighlight(item.passage, answerSpans[item.chunk_id])}</p>
               <div class="card-footer">
                 <span>Chunk: <code>${item.chunk_id}</code></span>
                 <button class="btn-verify-quick" data-idx="${idx}">
@@ -1508,6 +1671,121 @@
           }
         });
       });
+
+      bindAnswerActions(allAnswers);
+    }
+
+    function renderAnswers(ans) {
+      if (!ans || !ans.answer) {
+        return `
+          <div class="answer-card">
+            <p class="answer-note"><i class="fa-solid fa-circle-info"></i> No passage contained a sentence that clearly answers this question. Review the retrieved passages below.</p>
+          </div>`;
+      }
+      const alts = ans.alternatives || [];
+      return `
+        <div class="answer-section-title"><i class="fa-solid fa-lightbulb"></i> Answer</div>
+        ${answerCard(ans.answer, 0, true)}
+        <p class="answer-note" style="margin: -0.4rem 0 0.5rem;">
+          Quoted verbatim from the paper; the highlighted span in the source chunk is exactly where it comes from. Always check the full paper before relying on it.
+        </p>
+        ${alts.length ? `
+          <div class="answer-section-title">
+            <i class="fa-solid fa-code-branch"></i> Other answers from the literature
+            <span class="count">${alts.length}</span>
+          </div>
+          ${alts.map((a, i) => answerCard(a, i + 1, false)).join('')}
+        ` : ''}
+      `;
+    }
+
+    function answerCard(a, idx, isMain) {
+      const relation = isMain ? '' : (a.relation === 'similar'
+        ? '<span class="rel-pill rel-similar">Overlaps main answer</span>'
+        : '<span class="rel-pill rel-different">Additional perspective</span>');
+      const supporting = (a.supporting_sources || []);
+      const condKey = (a.condition || '').toLowerCase().replace(/[^a-z]/g, '');
+      return `
+        <div class="answer-card ${isMain ? 'main' : ''}">
+          <div class="answer-meta">
+            <span class="citation-badge"><i class="fa-solid fa-bookmark"></i> ${escapeHtml(a.citation)}</span>
+            <span class="tag-cond tag-${condKey}">${escapeHtml(a.condition || 'General')}</span>
+            <span class="conf-pill conf-${a.confidence}" title="Relevance score ${a.score}">${a.confidence} relevance</span>
+            ${relation}
+            <span class="spacer"></span>
+            <span class="tag-distance">Score: ${a.score}</span>
+          </div>
+          <blockquote class="answer-quote">${escapeHtml(a.text)}</blockquote>
+          <div class="source-file"><i class="fa-regular fa-file-pdf"></i> ${escapeHtml(a.source_file || a.paper_id)} · page ${a.page} · chunk ${escapeHtml(a.chunk_id)}</div>
+          ${supporting.length ? `
+            <div class="supporting-list">
+              <span>Also stated in:</span>
+              ${supporting.map(s => `<span class="supporting-chip" data-chunk="${escapeHtml(s.chunk_id)}" title="${escapeHtml(s.text)}">${escapeHtml(s.citation)}</span>`).join('')}
+            </div>` : ''}
+          <div class="answer-actions">
+            <button class="btn-verify-quick btn-toggle-chunk" data-ans="${idx}">
+              <i class="fa-solid fa-eye"></i> Show source chunk
+            </button>
+            <button class="btn-verify-quick btn-jump-passage" data-chunk="${escapeHtml(a.chunk_id)}">
+              <i class="fa-solid fa-arrow-down"></i> Find in passages
+            </button>
+            <button class="btn-verify-quick btn-audit-answer" data-ans="${idx}">
+              <i class="fa-solid fa-check"></i> Audit grounding
+            </button>
+          </div>
+          <div class="source-chunk" id="chunk-panel-${idx}">
+            <div class="source-chunk-head">
+              <span><i class="fa-solid fa-quote-left"></i> Exact source chunk · ${escapeHtml(a.citation)}</span>
+              <span>Highlighted: chars ${a.highlight.start}–${a.highlight.end}</span>
+            </div>
+            <p>${passageWithHighlight(a.passage, a.highlight)}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function bindAnswerActions(allAnswers) {
+      resultsArea.querySelectorAll('.btn-toggle-chunk').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const panel = document.getElementById(`chunk-panel-${btn.dataset.ans}`);
+          const open = panel.classList.toggle('open');
+          btn.innerHTML = open
+            ? '<i class="fa-solid fa-eye-slash"></i> Hide source chunk'
+            : '<i class="fa-solid fa-eye"></i> Show source chunk';
+        });
+      });
+      resultsArea.querySelectorAll('.btn-jump-passage, .supporting-chip').forEach(el => {
+        el.addEventListener('click', () => jumpToPassage(el.dataset.chunk));
+      });
+      resultsArea.querySelectorAll('.btn-audit-answer').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const a = allAnswers[parseInt(btn.dataset.ans, 10)];
+          if (a) verifyQuick(a.citation, a.text);
+        });
+      });
+    }
+
+    function jumpToPassage(chunkId) {
+      const card = document.getElementById(`passage-${cssId(chunkId)}`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.classList.add('flash');
+      setTimeout(() => card.classList.remove('flash'), 1800);
+    }
+
+    function passageWithHighlight(passage, span) {
+      if (!passage) return '';
+      if (!span || span.end <= span.start) return highlightTerms(escapeHtml(passage));
+      const before = passage.slice(0, span.start);
+      const mid = passage.slice(span.start, span.end);
+      const after = passage.slice(span.end);
+      return highlightTerms(escapeHtml(before))
+        + `<mark class="ans-hl">${escapeHtml(mid)}</mark>`
+        + highlightTerms(escapeHtml(after));
+    }
+
+    function cssId(str) {
+      return String(str || '').replace(/[^A-Za-z0-9_-]/g, '_');
     }
 
     function renderResearchResults(data) {
