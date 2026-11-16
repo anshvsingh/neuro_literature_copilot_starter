@@ -27,6 +27,7 @@ flowchart TD
         I --> J[src.research.assess_passage\n7 Heuristic Quality Rules]
         J --> K[Re-ranking & Diversity\nAspect Boosting & Max 2/paper]
         K --> L[Selected Evidence Passages]
+        L --> L2[src.answer.build_answers\nExtractive Answer + Alternatives\nwith Source-Chunk Offsets]
     end
 
     subgraph AdaptiveWorkflow ["3. Adaptive Multi-Round Research"]
@@ -67,10 +68,38 @@ To launch the web application:
 ```
 
 ### Dashboard Capabilities:
-- **Research Studio**: Execute semantic searches or full adaptive multi-round agentic synthesis across any of the 4 conditions with real-time term highlighting and citation audits.
+- **Research Studio**: Execute semantic searches or full adaptive multi-round agentic synthesis across any of the 4 conditions with real-time term highlighting and citation audits. Semantic search now answers the question directly: a main answer plus alternative answers from other papers, each linked to the exact source chunk with the quoted span highlighted (see [Answers with Sources](#answers-with-sources)).
 - **Corpus Explorer**: Browse all 25 indexed peer-reviewed PDFs with page counts, semantic chunk tallies, and filter by condition.
 - **Benchmark & Evaluations**: Explore the verified 16-question evaluation suite (Development vs Held-Out Test splits) with physical paper IDs, gold pages, and verbatim quotes.
 - **Citation & Groundedness Verifier**: Interactive auditor for citation strings (`ALZ01, p. 4`), source page bounds checking against the manifest, and verbatim quote containment.
+
+---
+
+## Answers with Sources
+
+In **Fast Semantic Search** mode, Research Studio shows an answer before the list of retrieved passages:
+
+- **Answer**: the best-matching sentence(s), with paper ID, page, PDF file, chunk ID and a relevance level (high / medium / low).
+- **Other answers from the literature**: up to 5 more answers, preferring different papers. Each is tagged *Overlaps main answer* or *Additional perspective*.
+- **Show source chunk**: opens the full chunk with the answer span highlighted, so you can read it in context.
+- **Find in passages**: scrolls to that chunk in the retrieved-passages list.
+- **Audit grounding**: sends the quote to the Citation Verifier, which checks that it appears verbatim on the cited PDF page.
+- **Also stated in**: other papers that say nearly the same thing are merged into one answer and listed as corroborating sources.
+
+Answers are **extractive**: they are quoted word-for-word from the papers, never generated, so each one can be checked against its source. `src/answer.py`:
+
+1. Splits each retrieved passage into sentences and keeps character offsets.
+2. Drops sentences that rarely answer anything: reference lists, figure/table captions, title and author lines, funding and disclosure statements, and fragments cut off by chunking.
+3. Scores each sentence against the question: 0.85 × cosine similarity (same `all-MiniLM-L6-v2` model as retrieval) + 0.15 × keyword overlap.
+4. Takes the best span per passage (adding one neighbouring sentence when it is nearly as relevant), merges near-duplicates, and drops weak alternatives.
+
+The `/api/search` response includes an `answers` field (`answer`, `alternatives`, each with `text`, `citation`, `chunk_id`, `passage` and `highlight` offsets). Pass `"include_answer": false` to skip it.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/search \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Which EEG features and machine-learning models are used for epilepsy seizure detection?", "top_k": 10}'
+```
 
 ---
 
@@ -93,7 +122,9 @@ To launch the web application:
 4. **Performance & Caching:**
    - In-memory caching of `SentenceTransformer` and `ChromaDB.PersistentClient` in `src.retrieve`, reducing query latency from ~5.5s to ~0.5s (11x speedup).
 5. **Comprehensive Test Suite:**
-   - Expanded from 10 to **24 unit tests** covering retrieval metrics, passage filtering, citation formatting, boundary limits, groundedness, and report auditing.
+   - Expanded from 10 to **33 unit tests** covering retrieval metrics, passage filtering, citation formatting, boundary limits, groundedness, report auditing, and answer-sentence extraction.
+6. **Answers with Sources (`src/answer.py`):**
+   - Extractive main answer and alternative answers, each traced to the exact chunk and character span it came from.
 
 ---
 
@@ -121,7 +152,7 @@ Set-Location "F:\Neuro Literature Research Copilot"
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Run All Unit Tests (24 Tests)
+### 2. Run All Unit Tests (33 Tests)
 
 ```powershell
 & ".\.venv\Scripts\python.exe" -m unittest discover -s tests -p "test_*.py" -v
@@ -215,13 +246,15 @@ neuro_literature_copilot/
 │   ├── ingest.py                       # PDF extraction and chunking
 │   ├── retrieve.py                     # Cached semantic search with ChromaDB
 │   ├── research.py                     # Filtering, re-ranking, and report synthesis
+│   ├── answer.py                       # Extractive answers + alternatives with source spans
 │   ├── agentic_research.py             # Adaptive multi-round research workflow
 │   ├── validation.py                   # Citation and source-page validation
 │   └── evaluate.py                     # Precision, Recall@k, and MRR metrics
 ├── tests/
 │   ├── test_evaluate.py                # Retrieval metric tests (5 tests)
 │   ├── test_research_filter.py         # Passage heuristic filter tests (5 tests)
-│   └── test_citation_validation.py     # Citation & boundary validation tests (14 tests)
+│   ├── test_citation_validation.py     # Citation & boundary validation tests (14 tests)
+│   └── test_answer.py                  # Answer sentence splitting & filtering tests (9 tests)
 ├── requirements.txt
 └── README.md
 ```
@@ -235,12 +268,14 @@ neuro_literature_copilot/
 3. **Retrieval Reliability & Filtering:** Enhanced `src/research.py` with scaled candidate pools (up to 120 candidates), 7 refined heuristic quality filters (eliminating false-positive bibliographies on Frontiers/IEEE headers), aspect-aware distance re-ranking, and paper diversity enforcement.
 4. **Validation Engine:** Created `src/validation.py` providing citation syntax parsing (`ALZ01, p. 4`, `PAR07, pp. 2-4`), page boundary checks, evidence structural validation, and automated report auditing.
 5. **Caching & Latency:** Optimized `src/retrieve.py` with in-memory caching of the SentenceTransformer model and ChromaDB client, maintaining sub-second query latency even over 1,363 chunks.
-6. **Testing Suite:** Expanded test suite from 10 to 24 comprehensive unit tests; all 24 tests pass in <0.1s.
+6. **Testing Suite:** Expanded test suite from 10 to 33 comprehensive unit tests; all 33 tests pass in <0.1s.
+7. **Answers with Sources:** Added `src/answer.py` and new Research Studio answer cards showing a main answer, alternative answers, and the exact highlighted source chunk for each.
 
 ---
 
 ## Remaining Limitations & Future Work
 
 - **Deterministic Synthesis:** The current report generator uses transparent rule-based term detection rather than generative LLM synthesis.
+- **Extractive Answers Only:** Answers are quoted sentences, so their quality depends on retrieval and on how cleanly PDF text splits into sentences. Answer thresholds in `src/answer.py` are hand-tuned heuristics. An LLM could summarize across answers, as long as each claim still cites the highlighted chunks.
 - **Single-Vector Embeddings:** The retriever relies on `all-MiniLM-L6-v2`; integrating biomedical models (such as PubMedBERT or BioLinkBERT) would further enhance domain terminology representation.
 - **Complex Table Parsing:** Highly dense multi-column performance benchmark tables require specialized OCR/table extractors for tabular query resolution.

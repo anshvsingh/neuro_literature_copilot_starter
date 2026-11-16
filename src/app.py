@@ -116,7 +116,7 @@ def get_stats() -> Dict[str, Any]:
             "question_coverage": eval_summary.get("question_coverage_at_k", 1.0),
             "mean_retrieval_seconds": eval_summary.get("mean_retrieval_seconds", 0.792),
             "total_questions": 16,
-            "passing_unit_tests": 24,
+            "passing_unit_tests": 33,
         },
     }
 
