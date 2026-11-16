@@ -1626,7 +1626,7 @@
       });
 
       resultsArea.innerHTML = `
-        ${renderAnswers(ans)}
+        ${renderAnswers(data.answers)}
         <div class="answer-section-title">
           <i class="fa-solid fa-layer-group"></i> All retrieved passages
           <span class="count">${data.results.length}</span>
@@ -1676,6 +1676,13 @@
     }
 
     function renderAnswers(ans) {
+      if (ans === undefined) {
+        // The page is newer than the running server: the backend predates the answers feature.
+        return `
+          <div class="answer-card">
+            <p class="answer-note"><i class="fa-solid fa-triangle-exclamation"></i> The server did not return answers. It is probably running older code: stop it and start it again with <code>run_app.py</code>.</p>
+          </div>`;
+      }
       if (!ans || !ans.answer) {
         return `
           <div class="answer-card">
